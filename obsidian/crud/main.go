@@ -10,9 +10,9 @@ func ping(c *gin.Context) {
 	})
 }
 
-func Serve() {
+func Serve(storageRoot string) {
 	r := gin.Default()
 	r.GET("/ping", ping)
-	SetupObjectRouter(r)
+	SetupObjectRouter(r, storageRoot)
 	r.Run()
 }
