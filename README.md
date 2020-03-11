@@ -14,10 +14,10 @@ ToDo
 ----
 
 * Finish CRUD object storage APIs
-    [x] GET
-    [x] POST
-    [] PUT
-    [] DELETE
+  - [x] GET
+  - [x] POST
+  - [ ] PUT
+  - [ ] DELETE
 * Start UI for object storage control plane
 * Design gossip protocol for node discovery
 * Implement pass-through requests
