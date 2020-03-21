@@ -13,7 +13,7 @@ Goals
 ToDo
 ----
 
-* [ ] Migrate existing endpoints and web app to use Gorilla Mux in order to use the same URLs for GET/POST/PUT/DELETE methods.
+* [X] Migrate existing endpoints and web app to use Gorilla Mux in order to use the same URLs for GET/POST/PUT/DELETE methods.
 * [ ] Finish CRUD object storage APIs
   - [x] GET
   - [x] POST
