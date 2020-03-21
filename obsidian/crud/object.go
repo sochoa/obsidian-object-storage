@@ -2,162 +2,111 @@ package crud
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
+	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 )
 
-var (
-	storageRoot string
-)
+func postObject(cfg Config, responseWriter http.ResponseWriter, request *http.Request) {
 
-func postObject(ctx *gin.Context) {
+	vars := mux.Vars(request)
+	bucket, pathTrail := vars["bucket"], vars["path"]
+	responseWriter.Header().Set("Content-Type", "application/json")
 
 	var (
-		err_msg_fmt string
-		err_msg     string
+		bucketWithStorageRoot       string = path.Join(cfg.StorageRoot, bucket)
+		bucketWithStorageRootExists bool   = false
+		err                         error  = nil
 	)
-
-	bucket, pathTrail, err := parseUri(ctx)
-
-	if err == nil {
-		var (
-			bucketWithStorageRoot       string = path.Join(storageRoot, bucket)
-			bucketWithStorageRootExists bool   = false
-		)
-		bucketWithStorageRootExists, err = pathExists(bucketWithStorageRoot)
-		if err == nil {
-			if !bucketWithStorageRootExists {
-				log.Printf("Creating bucket directory:  %v\n", bucketWithStorageRoot)
-				err = os.MkdirAll(bucketWithStorageRoot, 0755)
-				if err != nil {
-					err_msg_fmt = "ERROR:  Could not create bucket directory.  Details:  %s"
-					err_msg = fmt.Sprintf(err_msg_fmt, err.Error())
-					ctx.JSON(http.StatusInternalServerError, gin.H{
-						"bucket":  bucket,
-						"path":    pathTrail,
-						"status":  "error",
-						"details": err_msg,
-					})
-					return
-				}
-			} else {
-				log.Printf("Directory already exists:  %s", bucketWithStorageRoot)
-			}
-		} else {
-			err_msg_fmt = "ERROR:  Could not determine whether the bucket exists.  Details:  %s"
-			err_msg = fmt.Sprintf(err_msg_fmt, err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"bucket":  bucket,
-				"path":    pathTrail,
-				"status":  "error",
-				"details": err_msg,
-			})
-			return
-		}
-
-		var pathWithBucketStorageRoot string = path.Join(bucketWithStorageRoot, pathTrail)
-		new_object, err := ctx.FormFile("file")
-		if err == nil { // Successful form file read
-			err = ctx.SaveUploadedFile(new_object, pathWithBucketStorageRoot)
-			if err == nil { // Successful write
-				ctx.JSON(200, gin.H{
-					"bucket": bucket,
-					"path":   pathTrail,
-					"status": "success",
-				})
-			} else {
-				err_msg_fmt = "ERROR:  Failed to save the uploaded file: %s"
-				err_msg = fmt.Sprintf(err_msg_fmt, err.Error())
-				ctx.JSON(http.StatusBadRequest, gin.H{
-					"bucket":  bucket,
-					"path":    pathTrail,
-					"status":  "error",
-					"details": err_msg,
-				})
-			}
-		} else {
-			err_msg_fmt = "ERROR:  Failed to read form file from HTTP POST: %s"
-			err_msg = fmt.Sprintf(err_msg_fmt, err.Error())
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"bucket":  bucket,
-				"path":    pathTrail,
-				"status":  "error",
-				"details": err_msg,
-			})
-		}
-	}
-	ctx.JSON(http.StatusNoContent, gin.H{
-		"status": "created",
-		"bucket": bucket,
-		"path":   pathTrail,
-	})
-}
-
-func getObject(ctx *gin.Context) {
-	var (
-		bucket      string
-		err         error
-		err_msg     string
-		err_msg_fmt string
-		exists      bool
-		pathTrail   string
-	)
-	bucket, pathTrail, err = parseUri(ctx)
+	bucketWithStorageRootExists, err = pathExists(bucketWithStorageRoot)
 	if err != nil {
-		err_msg_fmt = "ERROR:  Failed to parse bucket and path from URI: %s"
-		err_msg = fmt.Sprintf(err_msg_fmt, err.Error())
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"details": err_msg,
-		})
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, "Could not determine whether the bucket exists", err)
 		return
 	}
-	objectPath := path.Join(storageRoot, bucket, pathTrail)
 
+	if !bucketWithStorageRootExists {
+		log.Printf("Creating bucket directory:  %v\n", bucketWithStorageRoot)
+		err = os.MkdirAll(bucketWithStorageRoot, cfg.DirMode)
+	}
+
+	if err != nil {
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, fmt.Sprintf("Could not create bucket directory %s", strconv.Quote(bucketWithStorageRoot)), err)
+		return
+	}
+
+	var (
+		pathWithBucketStorageRoot string = path.Join(bucketWithStorageRoot, pathTrail)
+		newIncomingObjectFd       multipart.File
+		//newIncomingObjectFileHeader *multipart.FileHeader
+	)
+	newIncomingObjectFd, _, err = request.FormFile("file")
+	if err != nil {
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusBadRequest, "Failed to read form file with name \"file\" for upload", err)
+		return
+	}
+
+	var (
+		newLocalObjectFd *os.File = nil
+		bytesWritten     int64    = -1
+	)
+	newLocalObjectFd, err = os.OpenFile(pathWithBucketStorageRoot, os.O_WRONLY|os.O_CREATE, cfg.FileMode)
+	if newLocalObjectFd == nil || err != nil {
+		logMsg := fmt.Sprintf("Failed to read form file with name \"file\" for upload (fd=%v, filePath=%s, err=%v)", newLocalObjectFd, pathWithBucketStorageRoot, err)
+		httpMsg := fmt.Sprintf("Failed to read form file with name \"file\" for upload")
+		log.Println(logMsg)
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusBadRequest, httpMsg, err)
+		return
+	}
+	bytesWritten, err = io.Copy(newLocalObjectFd, newIncomingObjectFd)
+	if err != nil || bytesWritten <= 0 {
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusBadRequest, fmt.Sprintf("Failed to read form file from HTTP request (bytes=%d)", bytesWritten), err)
+		return
+	}
+	WriteStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusCreated, "Created")
+}
+
+func getObject(cfg Config, responseWriter http.ResponseWriter, request *http.Request) {
+
+	vars := mux.Vars(request)
+	bucket, pathTrail := vars["bucket"], vars["path"]
+	responseWriter.Header().Set("Content-Type", "application/json")
+
+	var (
+		err    error = nil
+		exists bool  = false
+	)
+	objectPath := path.Join(cfg.StorageRoot, bucket, pathTrail)
 	exists, err = pathExists(objectPath)
 	if err != nil {
-		err_msg_fmt = "ERROR:  Failed to determine if object exists: %s"
-		err_msg = fmt.Sprintf(err_msg_fmt, err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"details": err_msg,
-		})
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, "Failed to determine if object exists", err)
 		return
 	} else if !exists {
-		err_msg_fmt = "ERROR:  Object does not exist: %s/%s"
-		err_msg = fmt.Sprintf(err_msg_fmt, bucket, pathTrail)
-		ctx.JSON(http.StatusNotFound, gin.H{
-			"status":  "error",
-			"details": err_msg,
-		})
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, "Object does not exist", err)
 		return
 	}
 
-	objectNameParts := strings.Split(pathTrail, "/")
-	objectName := objectNameParts[len(objectNameParts)-1]
-	ctx.Header("Content-Description", objectName)
-	ctx.Header("Content-Transfer-Encoding", "binary")
-	ctx.Header("Content-Disposition", "attachment; filename="+objectName)
-	ctx.Header("Content-Type", "application/octet-stream")
-	ctx.File(objectPath)
+	var objectFd *os.File = nil
+	objectFd, err = os.Open(objectPath)
+	if objectFd == nil || err != nil {
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, "Failed to read object from disk", err)
+	} else {
+		defer objectFd.Close()
+		objectNameParts := strings.Split(pathTrail, "/")
+		objectName := objectNameParts[len(objectNameParts)-1]
+		responseWriter.Header().Set("Content-Description", objectName)
+		responseWriter.Header().Set("Content-Transfer-Encoding", "binary")
+		responseWriter.Header().Set("Content-Disposition", "attachment; filename="+objectName)
+		responseWriter.Header().Set("Content-Type", "application/octet-stream")
+		WriteStatus(responseWriter, bucket, pathTrail, http.StatusOK)
+		io.Copy(responseWriter, objectFd)
+	}
 }
-
-/*
-func putObject(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{
-		"status": "success",
-	})
-}
-
-func deleteObject(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{
-		"status": "success", })
-}
-*/
 
 func pathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -170,23 +119,28 @@ func pathExists(path string) (bool, error) {
 	return true, err
 }
 
-func parseUri(ctx *gin.Context) (string, string, error) {
-	uriTrail := ctx.Param("uriTrail")
-	uriParts := strings.Split(uriTrail, "/")
-	if len(uriParts) < 3 {
-		err_fmt := "Failed to parse URI.  Bucket and path could not be parsed from URI:  %s"
-		return "", "", fmt.Errorf(err_fmt, uriTrail)
-	}
-	return uriParts[1], strings.Join(uriParts[2:], "/"), nil
-}
+type muxRequestHandler func(http.ResponseWriter, *http.Request)
+type configuredMuxRequestHandler func(Config, http.ResponseWriter, *http.Request)
 
-func SetupObjectRouter(router *gin.Engine, configuredStorageRoot string) {
-	storageRoot = configuredStorageRoot
-	var bucketPathUriPattern string = "/*uriTrail"
-	router.POST(strings.Join([]string{"", "create", bucketPathUriPattern}, "/"), postObject)
-	router.GET(strings.Join([]string{"", "get", bucketPathUriPattern}, "/"), getObject)
-	/*
-		router.PUT(bucketPathUriPattern, putObject)
-		router.DELETE(bucketPathUriPattern, deleteObject)
-	*/
+func SetupObjectRoutes(requestRouter *mux.Router, cfg Config) {
+
+	var (
+		bucketRegex      string = "[a-zA-Z][a-zA-Z0-9]*"
+		bucketUriPattern string = fmt.Sprintf("{bucket:%s}", bucketRegex)
+		pathRegex        string = "[a-zA-Z0-9/-_\\.]+"
+		pathUriPattern   string = fmt.Sprintf("{path:%s}", pathRegex)
+		uriPattern       string = fmt.Sprintf("/%s/%s", bucketUriPattern, pathUriPattern)
+	)
+
+	wrapHandlerWithConfig := func(hdlr configuredMuxRequestHandler) muxRequestHandler {
+		return func(w http.ResponseWriter, r *http.Request) {
+			hdlr(cfg, w, r)
+		}
+	}
+
+	log.Printf("Configuring request hanlder:  \"%s\" for POST requests", uriPattern)
+	requestRouter.HandleFunc(uriPattern, wrapHandlerWithConfig(postObject)).Methods("POST")
+
+	log.Printf("Configuring request hanlder:  \"%s\" for GET requests", uriPattern)
+	requestRouter.HandleFunc(uriPattern, wrapHandlerWithConfig(getObject)).Methods("GET")
 }

@@ -27,6 +27,7 @@ clean:
 	rm -rf $(PROJECT_BUILD_OUTPUT)/*
 
 mod-vendor:
+	rm -rf "$(PROJECT_DIR)/vendor/*"
 	$(DOCKER_RUN_GO) mod vendor
 
 $(PROJECT_BUILD_OUTPUT):
