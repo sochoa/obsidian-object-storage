@@ -6,7 +6,7 @@ Object storage service dataplane
 Goals
 -----
 
-1.  Provide reliable, durable, performant, and secure object storage service.
+1.  Provide an object storage service that does not suck.
 2.  Provide the building blocks of a web-scale object storage service.
 3.  Provide inter-operability with other services -- do one thing well, not the kitchen sink approach.
 
