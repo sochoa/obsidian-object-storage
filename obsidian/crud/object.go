@@ -125,9 +125,9 @@ type configuredMuxRequestHandler func(Config, http.ResponseWriter, *http.Request
 func SetupObjectRoutes(requestRouter *mux.Router, cfg Config) {
 
 	var (
-		bucketRegex      string = "[a-zA-Z][a-zA-Z0-9]*"
+		bucketRegex      string = "\\w[\\w\\d-_\\.]*"
 		bucketUriPattern string = fmt.Sprintf("{bucket:%s}", bucketRegex)
-		pathRegex        string = "[a-zA-Z0-9/-_\\.]+"
+		pathRegex        string = "\\w[\\w\\d-_\\.]*"
 		pathUriPattern   string = fmt.Sprintf("{path:%s}", pathRegex)
 		uriPattern       string = fmt.Sprintf("/%s/%s", bucketUriPattern, pathUriPattern)
 	)
