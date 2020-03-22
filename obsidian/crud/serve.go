@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/sochoa/obsidian/crud/config"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 )
 
-func Serve(cfg Config) {
+func Serve(cfg config.ObjectStorageConfig) {
 	requestRouter := mux.NewRouter()
 	SetupObjectRoutes(requestRouter, cfg)
 

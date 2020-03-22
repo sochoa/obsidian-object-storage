@@ -1,4 +1,4 @@
-package crud
+package config
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Config struct {
+type ObjectStorageConfig struct {
 	StorageRoot             string
 	Host                    string
 	Port                    int
@@ -21,7 +21,7 @@ type Config struct {
 	DirMode                 os.FileMode
 }
 
-func (cfg Config) String() string {
+func (cfg ObjectStorageConfig) String() string {
 	var kv map[string]string = make(map[string]string, 0)
 	kv["StorageRoot"] = cfg.StorageRoot
 	kv["Host"] = cfg.Host
@@ -42,7 +42,7 @@ func (cfg Config) String() string {
 	return fmt.Sprintf("{Config: %s}", serializedAttrs)
 }
 
-func (cfg *Config) BindPoint() string {
+func (cfg *ObjectStorageConfig) BindPoint() string {
 	return fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 }
 
@@ -55,8 +55,8 @@ func GetPwd() string {
 	return dir
 }
 
-func NewServeConfig() Config {
-	return Config{
+func NewObjectStorageConfig() ObjectStorageConfig {
+	return ObjectStorageConfig{
 		Host:                    "localhost",
 		Port:                    8080,
 		StorageRoot:             path.Join(GetPwd(), "obsidian-data"),
