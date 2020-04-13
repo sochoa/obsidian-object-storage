@@ -26,22 +26,27 @@ func WriteResponse(responseWriter http.ResponseWriter,
 	}
 
 	// Add the error to the response, if its set
-	err_msg := "n/a"
+	err_msg := ""
 	if err != nil {
 		err_msg = fmt.Sprintf("%v", err)
 		resp_data["error"] = err_msg
 	}
 
 	// Set response status code normally, if its not an error
-	if status >= 400 {
-		http.Error(responseWriter, err_msg, status)
-	} else {
-		responseWriter.WriteHeader(status)
-	}
+	responseWriter.WriteHeader(status)
+	/*
+		if status >= 400 {
+			http.Error(responseWriter, err_msg, status)
+		} else {
+			responseWriter.WriteHeader(status)
+		}
+	*/
 
 	// Common encode JSON to a string and write the response
-	jsonEncoder.Encode(resp_data)
-	responseWriter.Write(bytesBuffer.Bytes())
+	if status < 400 {
+		jsonEncoder.Encode(resp_data)
+		responseWriter.Write(bytesBuffer.Bytes())
+	}
 }
 
 func WriteStatusWithMessage(responseWriter http.ResponseWriter,
@@ -52,11 +57,8 @@ func WriteStatusWithMessage(responseWriter http.ResponseWriter,
 	WriteResponse(responseWriter, bucket, pathTrail, status, &msg, nil)
 }
 
-func WriteStatus(responseWriter http.ResponseWriter,
-	bucket string,
-	pathTrail string,
-	status int) {
-	WriteResponse(responseWriter, bucket, pathTrail, status, nil, nil)
+func WriteStatus(responseWriter http.ResponseWriter, status int) {
+	responseWriter.WriteHeader(status)
 }
 
 func WriteErrorStatusWithMessage(responseWriter http.ResponseWriter,

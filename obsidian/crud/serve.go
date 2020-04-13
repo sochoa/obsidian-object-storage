@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/sochoa/obsidian/crud/config"
+	crud_config "github.com/sochoa/obsidian/crud/config"
+	crud_object "github.com/sochoa/obsidian/crud/object"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 )
 
-func Serve(cfg config.ObjectStorageConfig) {
+func Serve(cfg crud_config.ObjectStorageConfig) {
 	requestRouter := mux.NewRouter()
-	SetupObjectRoutes(requestRouter, cfg)
+	crud_object.SetupObjectRoutes(requestRouter, cfg)
 
 	srv := &http.Server{
 		Addr: cfg.BindPoint(),

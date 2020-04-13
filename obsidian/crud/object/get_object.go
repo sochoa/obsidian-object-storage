@@ -26,7 +26,7 @@ func GetObject(cfg config.ObjectStorageConfig, responseWriter http.ResponseWrite
 		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, "Failed to determine if object exists", err)
 		return
 	} else if !exists {
-		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusInternalServerError, "Object does not exist", err)
+		WriteErrorStatusWithMessage(responseWriter, bucket, pathTrail, http.StatusNotFound, "Object does not exist", err)
 		return
 	}
 
@@ -42,7 +42,7 @@ func GetObject(cfg config.ObjectStorageConfig, responseWriter http.ResponseWrite
 		responseWriter.Header().Set("Content-Transfer-Encoding", "binary")
 		responseWriter.Header().Set("Content-Disposition", "attachment; filename="+objectName)
 		responseWriter.Header().Set("Content-Type", "application/octet-stream")
-		WriteStatus(responseWriter, bucket, pathTrail, http.StatusOK)
+		responseWriter.WriteHeader(http.StatusOK)
 		io.Copy(responseWriter, objectFd)
 	}
 }

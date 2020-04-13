@@ -10,15 +10,16 @@ import (
 )
 
 type ObjectStorageConfig struct {
-	StorageRoot             string
-	Host                    string
-	Port                    int
-	GracefulShutdownTimeout time.Duration
-	WriteTimeout            time.Duration
-	ReadTimeout             time.Duration
-	IdleTimeout             time.Duration
-	FileMode                os.FileMode
-	DirMode                 os.FileMode
+	StorageRoot              string
+	Host                     string
+	Port                     int
+	DatabaseConnectionString string
+	GracefulShutdownTimeout  time.Duration
+	WriteTimeout             time.Duration
+	ReadTimeout              time.Duration
+	IdleTimeout              time.Duration
+	FileMode                 os.FileMode
+	DirMode                  os.FileMode
 }
 
 func (cfg ObjectStorageConfig) String() string {
@@ -32,6 +33,7 @@ func (cfg ObjectStorageConfig) String() string {
 	kv["IdleTimeout"] = cfg.IdleTimeout.String()
 	kv["FileMode"] = cfg.FileMode.String()
 	kv["DirMode"] = cfg.DirMode.String()
+	kv["DatabaseConnectionString"] = cfg.DatabaseConnectionString
 	serializedAttrs := ""
 	for k, v := range kv {
 		if len(serializedAttrs) > 0 {
@@ -66,5 +68,7 @@ func NewObjectStorageConfig() ObjectStorageConfig {
 		GracefulShutdownTimeout: time.Second * 5,
 		FileMode:                0666,
 		DirMode:                 0755,
+
+		DatabaseConnectionString: path.Join(GetPwd(), "obsidian-sqlite.db"),
 	}
 }
