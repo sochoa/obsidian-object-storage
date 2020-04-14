@@ -18,7 +18,7 @@ ToDo
   - [x] GET
   - [x] POST
   - [ ] PUT
-  - [ ] DELETE
+  - [X] DELETE
 * [ ] Start UI for object storage control plane
 * [ ] Design gossip protocol for node discovery
 * [ ] Implement pass-through requests
