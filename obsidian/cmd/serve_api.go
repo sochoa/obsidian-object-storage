@@ -9,7 +9,7 @@ import (
 var (
 	serveConfig config.ObjectStorageConfig
 	serveCmd    *cobra.Command = &cobra.Command{
-		Use:   "serve",
+		Use:   "serve-api",
 		Short: "Start the object storage service",
 		Run: func(cmd *cobra.Command, args []string) {
 			crud.Serve(serveConfig)

@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"github.com/sochoa/obsidian/util"
 	"os"
 	"path"
 	"strconv"
@@ -41,27 +41,18 @@ func (cfg ObjectStorageConfig) String() string {
 		}
 		serializedAttrs += fmt.Sprintf("%s=%s", k, strconv.Quote(v))
 	}
-	return fmt.Sprintf("{Config: %s}", serializedAttrs)
+	return fmt.Sprintf("{ObjectStoreConfig: %s}", serializedAttrs)
 }
 
 func (cfg *ObjectStorageConfig) BindPoint() string {
 	return fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 }
 
-func GetPwd() string {
-	dir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-		return "/tmp"
-	}
-	return dir
-}
-
 func NewObjectStorageConfig() ObjectStorageConfig {
 	return ObjectStorageConfig{
 		Host:                    "localhost",
 		Port:                    8080,
-		StorageRoot:             path.Join(GetPwd(), "obsidian-data"),
+		StorageRoot:             path.Join(util.GetPwd(), "obsidian-data"),
 		WriteTimeout:            time.Second * 15,
 		ReadTimeout:             time.Second * 15,
 		IdleTimeout:             time.Second * 60,
@@ -69,6 +60,6 @@ func NewObjectStorageConfig() ObjectStorageConfig {
 		FileMode:                0666,
 		DirMode:                 0755,
 
-		DatabaseConnectionString: path.Join(GetPwd(), "obsidian-sqlite.db"),
+		DatabaseConnectionString: path.Join(util.GetPwd(), "obsidian-sqlite.db"),
 	}
 }
