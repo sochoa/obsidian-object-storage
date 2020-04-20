@@ -28,3 +28,17 @@ ToDo
 * [ ] Use PKI for validating data plane requests
 * [ ] Use TLS for web endpoint (let's encrypt)
 * [ ] Design simulation of 3 endpoints via docker on a single host
+
+
+Architecture
+------------
+
+
+https://localhost:8080/obsidian/ui
+
+CREATE|GET|DELETE interaction via UI
+
+http://localhost:8080/obsidian/api/{bucket}/{path/to/thing}
+
+CREATE|GET|DELETE api call
+
