@@ -19,7 +19,7 @@ func SetupObjectRoutes(requestRouter *mux.Router, cfg config.ObjectStorageConfig
 		bucketUriPattern string = fmt.Sprintf("{bucket:%s}", bucketRegex)
 		pathRegex        string = "\\w[\\w\\d-_\\.]*"
 		pathUriPattern   string = fmt.Sprintf("{path:%s}", pathRegex)
-		uriPattern       string = fmt.Sprintf("/%s/%s", bucketUriPattern, pathUriPattern)
+		uriPattern       string = fmt.Sprintf("/api/v1/%s/%s", bucketUriPattern, pathUriPattern)
 	)
 
 	// Injecting dependency with Currying
